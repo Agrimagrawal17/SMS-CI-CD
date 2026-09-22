@@ -1,0 +1,46 @@
+services:
+  frontend:
+    image: agrim017/sms-frontend-agrim:latest
+    container_name: sms-frontend
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    depends_on:
+      - backend
+  
+  backend:
+  image: agrim017/sms-backend-agrim:latest
+  container_name: sms-backend
+  ports:
+    - "8000:8000"
+  environment:
+    DB_USERNAME: sms_user
+    DB_PASSWORD: root9090
+    DB_HOST: mysql
+    DB_PORT: 3306
+    DB_NAME: sms
+  restart: unless-stopped
+  depends_on:
+    mysql:
+      condition: service_healthy
+
+  mysql:
+    image: mysql:8.0
+    container_name: sms-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root9090
+      MYSQL_DATABASE: sms
+      MYSQL_USER: sms_user
+      MYSQL_PASSWORD: root9090
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD","mysqladmin","ping","-h","localhost","-proot9090"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:

@@ -16,7 +16,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Sabhi origins (localhost:5173, etc.) ko allow karega
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],  # GET, POST, PUT, DELETE, OPTIONS sab allow hain
     allow_headers=["*"],
 )
