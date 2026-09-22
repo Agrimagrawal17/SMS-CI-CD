@@ -1,0 +1,12 @@
+name : Step-1 Testing Pipeline Sms Deployement
+
+on: push
+
+jobs:
+    Testing-connection:
+        runs-on: ubuntu-latest
+        steps:
+          - name: Testing Pipline
+            run: echo "Welcome to the CI/CD"
+          - name: Connecting to pipline
+            run : echo "Connected "
