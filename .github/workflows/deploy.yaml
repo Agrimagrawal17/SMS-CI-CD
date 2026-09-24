@@ -85,11 +85,69 @@ jobs:
 
 
   # ==========================================
-  # STAGE 4: DEPLOY BACKEND
+  # STAGE 4: DEPLOY DATABASE (MySQL)
+  # ==========================================
+  deploy-database:
+    name: Deploy MySQL Container
+    needs: login
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check SSH connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "SSH CONNECTION SUCCESS"
+            whoami
+            hostname
+
+      - name: Create Docker network
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker network create sms-network || true
+
+      - name: Deploy MySQL to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "Deploying MySQL..."
+
+            docker pull mysql:8.0
+
+            docker stop sms-mysql || true
+            docker rm sms-mysql || true
+
+            docker run -d \
+              --name sms-mysql \
+              --restart unless-stopped \
+              --network sms-network \
+              -p 3306:3306 \
+              -e MYSQL_ROOT_PASSWORD=root9090 \
+              -e MYSQL_DATABASE=sms \
+              -e MYSQL_USER=sms_user \
+              -e MYSQL_PASSWORD=root9090 \
+              -v sms-mysql-data:/var/lib/mysql \
+              mysql:8.0
+
+            echo "MySQL deployed successfully"
+
+
+  # ==========================================
+  # STAGE 5: DEPLOY BACKEND
   # ==========================================
   deploy-backend:
     name: Deploy Backend
-    needs: build-backend
+    needs: [build-backend, deploy-database]
     runs-on: ubuntu-latest
 
     steps:
@@ -121,18 +179,24 @@ jobs:
             docker run -d \
               --name sms-backend \
               --restart unless-stopped \
+              --network sms-network \
               -p 8000:8000 \
+              -e MYSQL_HOST=sms-mysql \
+              -e MYSQL_PORT=3306 \
+              -e MYSQL_USER=sms_user \
+              -e MYSQL_PASSWORD=root9090 \
+              -e MYSQL_DATABASE=sms \
               ${{ secrets.DOCKERHUB_USERNAME }}/sms-backend:v${{ github.run_number }}
 
             echo "Backend deployed successfully"
 
 
   # ==========================================
-  # STAGE 5: DEPLOY FRONTEND
+  # STAGE 6: DEPLOY FRONTEND
   # ==========================================
   deploy-frontend:
     name: Deploy Frontend
-    needs: build-frontend
+    needs: [build-frontend, deploy-backend]
     runs-on: ubuntu-latest
 
     steps:
